@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Losowanie agentów — VALORANT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1923;
+    --bg2:#0b1219;
+    --panel:#1a232e;
+    --panel2:#141d27;
+    --line:#2a3742;
+    --red:#ff4655;
+    --ink:#ece8e1;
+    --muted:#7f8b96;
+    --duelist:#ff4655;
+    --initiator:#3fd0ff;
+    --controller:#b57bff;
+    --sentinel:#4ce0a6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(255,70,85,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(63,208,255,.08), transparent 55%),
+      var(--bg);
+    padding:28px 18px 80px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* Header */
+  header{margin-bottom:22px;position:relative}
+  .eyebrow{
+    font-family:'Oswald',sans-serif;letter-spacing:.42em;font-size:12px;
+    color:var(--red);text-transform:uppercase;font-weight:600;margin-bottom:8px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow::before{content:"";width:26px;height:2px;background:var(--red);display:inline-block}
+  h1{
+    font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;
+    font-size:clamp(34px,6vw,58px);line-height:.92;letter-spacing:.01em;
+  }
+  h1 span{color:var(--red)}
+  .sub{color:var(--muted);margin-top:10px;font-size:14px;max-width:520px}
+
+  /* Draw */
+  .stage{
+    margin-top:24px;background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);
+    clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px));
+    padding:30px 28px;position:relative;overflow:hidden;
+  }
+  .stage::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(90deg,rgba(255,255,255,.015) 0 2px,transparent 2px 4px);
+    opacity:.5;
+  }
+  .result{
+    text-align:center;padding:18px 0 8px;position:relative;z-index:1;
+    min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .result .badge{
+    font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.3em;
+    font-size:12px;font-weight:600;padding:5px 14px;border:1px solid currentColor;
+    color:var(--muted);margin-bottom:14px;transition:color .2s;
+  }
+  .result .agent{
+    font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;
+    font-size:clamp(44px,10vw,90px);line-height:.9;letter-spacing:.01em;
+    text-shadow:0 0 40px rgba(255,70,85,.25);transition:transform .12s;
+  }
+  .result.rolling .agent{opacity:.85;filter:blur(.4px)}
+  .result.landed .agent{animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes pop{0%{transform:scale(.8);opacity:.3}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+  .result .hint{color:var(--muted);font-size:14px;font-family:'Inter'}
+
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;
+    margin-top:8px;position:relative;z-index:1}
+  .btn-roll{
+    font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.14em;
+    font-weight:700;font-size:22px;color:#0f1923;background:var(--red);border:none;
+    padding:16px 46px;cursor:pointer;position:relative;
+    clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%);
+    transition:transform .08s, box-shadow .2s, background .2s;
+    box-shadow:0 0 0 rgba(255,70,85,0);
+  }
+  .btn-roll:hover{background:#ff5e6b;box-shadow:0 8px 30px rgba(255,70,85,.35)}
+  .btn-roll:active{transform:translateY(2px)}
+  .btn-roll:disabled{background:#3a4550;color:#7f8b96;cursor:not-allowed;box-shadow:none}
+  .poolinfo{color:var(--muted);font-size:13px;width:100%;text-align:center;margin-top:2px}
+  .poolinfo b{color:var(--ink)}
+
+  /* toggles row */
+  .opts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px;
+    position:relative;z-index:1}
+  .chip{
+    font-size:12.5px;font-weight:600;letter-spacing:.02em;padding:8px 14px;cursor:pointer;
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    text-transform:uppercase;font-family:'Oswald',sans-serif;letter-spacing:.12em;
+    transition:all .15s;user-select:none;
+  }
+  .chip:hover{border-color:var(--muted);color:var(--ink)}
+  .chip.on{color:#0f1923;font-weight:700}
+  .chip[data-role="Duelista"].on{background:var(--duelist);border-color:var(--duelist)}
+  .chip[data-role="Inicjator"].on{background:var(--initiator);border-color:var(--initiator)}
+  .chip[data-role="Kontroler"].on{background:var(--controller);border-color:var(--controller)}
+  .chip[data-role="Strażnik"].on{background:var(--sentinel);border-color:var(--sentinel)}
+  .chip.norepeat.on{background:var(--ink);border-color:var(--ink)}
+
+  /* Roster */
+  .roster-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;
+    gap:12px;margin:38px 0 6px}
+  .roster-head h2{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.08em;
+    font-size:22px;font-weight:600}
+  .bulk{display:flex;gap:8px}
+  .bulk button{
+    font-family:'Inter';font-size:12px;font-weight:600;background:transparent;color:var(--muted);
+    border:1px solid var(--line);padding:7px 12px;cursor:pointer;transition:all .15s}
+  .bulk button:hover{color:var(--ink);border-color:var(--muted)}
+
+  .rolegroup{margin-top:22px}
+  .rolelabel{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .rolelabel .dot{width:10px;height:10px;transform:rotate(45deg)}
+  .rolelabel h3{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.14em;
+    font-size:14px;font-weight:600}
+  .rolelabel .count{color:var(--muted);font-size:12px;margin-left:auto}
+  .rolelabel .selrole{font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;
+    text-decoration:underline;text-underline-offset:2px}
+  .rolelabel .selrole:hover{color:var(--ink)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .agent-card{
+    display:flex;align-items:center;gap:11px;padding:11px 13px;cursor:pointer;
+    background:var(--panel2);border:1px solid var(--line);position:relative;
+    transition:all .14s;user-select:none;overflow:hidden;
+  }
+  .agent-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:var(--rolec);opacity:.5;transition:opacity .14s}
+  .agent-card .av{
+    width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;
+    font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;color:#0f1923;
+    background:var(--rolec);transform:rotate(45deg);
+  }
+  .agent-card .av span{transform:rotate(-45deg)}
+  .agent-card .nm{font-weight:600;font-size:14px;letter-spacing:.01em}
+  .agent-card .tick{margin-left:auto;width:18px;height:18px;border:1.5px solid var(--line);
+    display:grid;place-items:center;flex:0 0 18px}
+  .agent-card .tick svg{width:12px;height:12px;opacity:0;transition:opacity .12s}
+  /* owned state */
+  .agent-card.off{opacity:.42;filter:grayscale(.6)}
+  .agent-card.off::before{opacity:.15}
+  .agent-card.on .tick{background:var(--rolec);border-color:var(--rolec)}
+  .agent-card.on .tick svg{opacity:1}
+  .agent-card:hover{border-color:var(--rolec);transform:translateY(-1px)}
+
+  footer{margin-top:44px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7}
+  footer b{color:var(--ink)}
+  .loading{text-align:center;color:var(--muted);padding:60px 0;font-family:'Oswald';
+    letter-spacing:.2em;text-transform:uppercase}
+
+  @media(max-width:520px){
+    .stage{padding:24px 16px}
+    .btn-roll{padding:14px 34px;font-size:19px}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Valorant · Season 2026</div>
+    <h1>Losowanie <span>agentów</span></h1>
+    <p class="sub">Zaznacz agentów, których masz odblokowanych, ustaw role i losuj. Twój wybór zapisuje się automatycznie.</p>
+  </header>
+
+  <section class="stage">
+    <div class="result" id="result">
+      <div class="hint">Naciśnij <b>LOSUJ</b>, żeby wybrać agenta</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-roll" id="rollBtn">Losuj</button>
+    </div>
+
+    <div class="opts" id="roleFilters">
+      <div class="chip on" data-role="Duelista">Duelista</div>
+      <div class="chip on" data-role="Inicjator">Inicjator</div>
+      <div class="chip on" data-role="Kontroler">Kontroler</div>
+      <div class="chip on" data-role="Strażnik">Strażnik</div>
+      <div class="chip norepeat" id="noRepeat" title="Losuje bez powtórzeń aż do wyczerpania puli">Bez powtórzeń</div>
+    </div>
+    <div class="poolinfo" id="poolInfo"></div>
+  </section>
+
+  <div class="roster-head">
+    <h2>Twój roster</h2>
+    <div class="bulk">
+      <button id="selAll">Zaznacz wszystkich</button>
+      <button id="selNone">Odznacz wszystkich</button>
+    </div>
+  </div>
+
+  <div id="roster">
+    <div class="loading">Ładowanie…</div>
+  </div>
+
+  <footer>
+    <b>29 agentów</b> · stan na sierpień 2026 · najnowszy: <b>Miks</b> (Kontroler, marzec 2026)<br>
+    Kliknij kartę, żeby zaznaczyć/odznaczyć posiadanie. Do puli losowania trafiają tylko zaznaczeni agenci z wybranych ról.
+  </footer>
+</div>
+
+<script>
+const AGENTS = [
+  {n:'Jett',r:'Duelista'},{n:'Phoenix',r:'Duelista'},{n:'Raze',r:'Duelista'},
+  {n:'Reyna',r:'Duelista'},{n:'Yoru',r:'Duelista'},{n:'Neon',r:'Duelista'},
+  {n:'Iso',r:'Duelista'},{n:'Waylay',r:'Duelista'},
+  {n:'Sova',r:'Inicjator'},{n:'Breach',r:'Inicjator'},{n:'Skye',r:'Inicjator'},
+  {n:'KAY/O',r:'Inicjator'},{n:'Fade',r:'Inicjator'},{n:'Gekko',r:'Inicjator'},
+  {n:'Tejo',r:'Inicjator'},
+  {n:'Brimstone',r:'Kontroler'},{n:'Viper',r:'Kontroler'},{n:'Omen',r:'Kontroler'},
+  {n:'Astra',r:'Kontroler'},{n:'Harbor',r:'Kontroler'},{n:'Clove',r:'Kontroler'},
+  {n:'Miks',r:'Kontroler'},
+  {n:'Sage',r:'Strażnik'},{n:'Cypher',r:'Strażnik'},{n:'Killjoy',r:'Strażnik'},
+  {n:'Chamber',r:'Strażnik'},{n:'Deadlock',r:'Strażnik'},{n:'Vyse',r:'Strażnik'},
+  {n:'Veto',r:'Strażnik'},
+];
+const ROLES = ['Duelista','Inicjator','Kontroler','Strażnik'];
+const ROLE_VAR = {Duelista:'--duelist',Inicjator:'--initiator',Kontroler:'--controller',Strażnik:'--sentinel'};
+const STORE_KEY = 'valorant-roll:v1';
+const TICK = `<svg viewBox="0 0 24 24" fill="none" stroke="#0f1923" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>`;
+
+// state
+let owned = new Set(AGENTS.map(a=>a.n));      // domyślnie wszyscy posiadani
+let activeRoles = new Set(ROLES);
+let noRepeat = false;
+let drawnHistory = new Set();                  // dla trybu bez powtórzeń
+let rolling = false;
+
+// ---- storage (persistent across sessions) ----
+async function loadState(){
+  try{
+    const res = await window.storage.get(STORE_KEY);
+    if(res && res.value){
+      const s = JSON.parse(res.value);
+      if(Array.isArray(s.owned)) owned = new Set(s.owned.filter(n=>AGENTS.some(a=>a.n===n)));
+      if(Array.isArray(s.roles) && s.roles.length) activeRoles = new Set(s.roles.filter(r=>ROLES.includes(r)));
+      if(typeof s.noRepeat==='boolean') noRepeat = s.noRepeat;
+    }
+  }catch(e){ /* pierwszy raz albo brak zapisu — użyj domyślnych */ }
+}
+async function saveState(){
+  const payload = JSON.stringify({owned:[...owned], roles:[...activeRoles], noRepeat});
+  try{ await window.storage.set(STORE_KEY, payload); }catch(e){}
+}
+
+// ---- render roster ----
+function buildRoster(){
+  const host = document.getElementById('roster');
+  host.innerHTML = '';
+  ROLES.forEach(role=>{
+    const list = AGENTS.filter(a=>a.r===role);
+    const group = document.createElement('div');
+    group.className = 'rolegroup';
+    const ownedCount = list.filter(a=>owned.has(a.n)).length;
+    group.innerHTML = `
+      <div class="rolelabel">
+        <span class="dot" style="background:var(${ROLE_VAR[role]})"></span>
+        <h3>${role}</h3>
+        <button class="selrole" data-role="${role}">przełącz wszystkich</button>
+        <span class="count" id="cnt-${role}">${ownedCount}/${list.length}</span>
+      </div>
+      <div class="grid"></div>`;
+    const grid = group.querySelector('.grid');
+    list.forEach(a=>{
+      const card = document.createElement('div');
+      card.className = 'agent-card ' + (owned.has(a.n)?'on':'off');
+      card.style.setProperty('--rolec', `var(${ROLE_VAR[role]})`);
+      card.dataset.name = a.n;
+      const initial = a.n.replace('/','')[0];
+      card.innerHTML = `
+        <div class="av"><span>${initial}</span></div>
+        <div class="nm">${a.n}</div>
+        <div class="tick">${TICK}</div>`;
+      card.addEventListener('click', ()=>toggleOwned(a.n, card));
+      grid.appendChild(card);
+    });
+    host.appendChild(group);
+  });
+}
+
+function toggleOwned(name, card){
+  if(owned.has(name)) owned.delete(name); else owned.add(name);
+  card.classList.toggle('on'); card.classList.toggle('off');
+  drawnHistory.delete(name);
+  updateRoleCounts();
+  updatePoolInfo();
+  saveState();
+}
+
+function updateRoleCounts(){
+  ROLES.forEach(role=>{
+    const list = AGENTS.filter(a=>a.r===role);
+    const el = document.getElementById('cnt-'+role);
+    if(el) el.textContent = `${list.filter(a=>owned.has(a.n)).length}/${list.length}`;
+  });
+}
+
+// ---- pool ----
+function currentPool(){
+  return AGENTS.filter(a=>owned.has(a.n) && activeRoles.has(a.r));
+}
+function updatePoolInfo(){
+  const pool = currentPool();
+  const info = document.getElementById('poolInfo');
+  const btn = document.getElementById('rollBtn');
+  if(pool.length===0){
+    info.innerHTML = 'Pula jest pusta — zaznacz agentów lub włącz jakąś rolę.';
+    btn.disabled = true;
+  }else{
+    btn.disabled = false;
+    let txt = `W puli: <b>${pool.length}</b> ${pool.length===1?'agent':(pool.length<5?'agentów':'agentów')}`;
+    if(noRepeat){
+      const left = pool.filter(a=>!drawnHistory.has(a.n)).length;
+      txt += ` · bez powtórzeń: <b>${left}</b> do wylosowania`;
+    }
+    info.innerHTML = txt;
+  }
+}
+
+// ---- draw with animation ----
+function roll(){
+  if(rolling) return;
+  let pool = currentPool();
+  if(pool.length===0) return;
+
+  if(noRepeat){
+    let left = pool.filter(a=>!drawnHistory.has(a.n));
+    if(left.length===0){ drawnHistory.clear(); left = pool; }
+    pool = left;
+  }
+
+  const pick = pool[Math.floor(Math.random()*pool.length)];
+  if(noRepeat) drawnHistory.add(pick.n);
+
+  const resultEl = document.getElementById('result');
+  const allNames = currentPool();
+  rolling = true;
+  document.getElementById('rollBtn').disabled = true;
+  resultEl.classList.remove('landed');
+  resultEl.classList.add('rolling');
+
+  let elapsed = 0, delay = 45;
+  const total = 950;
+  function frame(){
+    const rand = allNames[Math.floor(Math.random()*allNames.length)];
+    paintResult(rand, false);
+    elapsed += delay;
+    delay *= 1.14; // zwalnianie
+    if(elapsed < total){
+      setTimeout(frame, delay);
+    }else{
+      paintResult(pick, true);
+      resultEl.classList.remove('rolling');
+      resultEl.classList.add('landed');
+      rolling = false;
+      document.getElementById('rollBtn').disabled = false;
+      updatePoolInfo();
+    }
+  }
+  frame();
+}
+
+function paintResult(agent, final){
+  const el = document.getElementById('result');
+  const c = `var(${ROLE_VAR[agent.r]})`;
+  el.innerHTML = `
+    <div class="badge" style="color:${c}">${agent.r}</div>
+    <div class="agent" style="color:${final?'var(--ink)':c}">${agent.n}</div>`;
+  if(final){
+    el.querySelector('.agent').style.textShadow = `0 0 45px ${c}55`;
+  }
+}
+
+// ---- role filter + options ----
+function wireFilters(){
+  document.querySelectorAll('#roleFilters .chip[data-role]').forEach(chip=>{
+    const role = chip.dataset.role;
+    chip.classList.toggle('on', activeRoles.has(role));
+    chip.addEventListener('click', ()=>{
+      if(activeRoles.has(role)){
+        if(activeRoles.size===1) return; // zostaw min. jedną rolę
+        activeRoles.delete(role);
+      }else activeRoles.add(role);
+      chip.classList.toggle('on');
+      updatePoolInfo(); saveState();
+    });
+  });
+  const nr = document.getElementById('noRepeat');
+  nr.classList.toggle('on', noRepeat);
+  nr.addEventListener('click', ()=>{
+    noRepeat = !noRepeat;
+    nr.classList.toggle('on');
+    drawnHistory.clear();
+    updatePoolInfo(); saveState();
+  });
+
+  document.getElementById('rollBtn').addEventListener('click', roll);
+  document.getElementById('selAll').addEventListener('click', ()=>bulkSet(true));
+  document.getElementById('selNone').addEventListener('click', ()=>bulkSet(false));
+
+  // per-role toggle all
+  document.getElementById('roster').addEventListener('click', e=>{
+    const b = e.target.closest('.selrole');
+    if(!b) return;
+    const role = b.dataset.role;
+    const list = AGENTS.filter(a=>a.r===role);
+    const allOn = list.every(a=>owned.has(a.n));
+    list.forEach(a=>{ if(allOn) owned.delete(a.n); else owned.add(a.n); });
+    refreshCards(); updateRoleCounts(); updatePoolInfo(); saveState();
+  });
+}
+
+function bulkSet(on){
+  AGENTS.forEach(a=>{ if(on) owned.add(a.n); else owned.delete(a.n); });
+  drawnHistory.clear();
+  refreshCards(); updateRoleCounts(); updatePoolInfo(); saveState();
+}
+function refreshCards(){
+  document.querySelectorAll('.agent-card').forEach(card=>{
+    const on = owned.has(card.dataset.name);
+    card.classList.toggle('on', on);
+    card.classList.toggle('off', !on);
+  });
+}
+
+// ---- init ----
+(async function init(){
+  await loadState();
+  buildRoster();
+  wireFilters();
+  updatePoolInfo();
+})();
+</script>
+</body>
+</html>
