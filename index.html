@@ -237,13 +237,13 @@ const STORE_KEY = 'valorant-roll:v1';
 const TICK = `<svg viewBox="0 0 24 24" fill="none" stroke="#0f1923" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>`;
 
 // state
-let owned = new Set(AGENTS.map(a=>a.n));      // domyślnie wszyscy posiadani
+let owned = new Set(AGENTS.map(a=>a.n));      
 let activeRoles = new Set(ROLES);
 let noRepeat = false;
-let drawnHistory = new Set();                  // dla trybu bez powtórzeń
+let drawnHistory = new Set();                  
 let rolling = false;
 
-// ---- storage (persistent across sessions) ----
+// storage
 async function loadState(){
   try{
     const res = await window.storage.get(STORE_KEY);
@@ -260,7 +260,7 @@ async function saveState(){
   try{ await window.storage.set(STORE_KEY, payload); }catch(e){}
 }
 
-// ---- render roster ----
+// render roster 
 function buildRoster(){
   const host = document.getElementById('roster');
   host.innerHTML = '';
@@ -312,7 +312,7 @@ function updateRoleCounts(){
   });
 }
 
-// ---- pool ----
+// pool 
 function currentPool(){
   return AGENTS.filter(a=>owned.has(a.n) && activeRoles.has(a.r));
 }
@@ -334,7 +334,7 @@ function updatePoolInfo(){
   }
 }
 
-// ---- draw with animation ----
+// draw with animation 
 function roll(){
   if(rolling) return;
   let pool = currentPool();
@@ -362,7 +362,7 @@ function roll(){
     const rand = allNames[Math.floor(Math.random()*allNames.length)];
     paintResult(rand, false);
     elapsed += delay;
-    delay *= 1.14; // zwalnianie
+    delay *= 1.14; 
     if(elapsed < total){
       setTimeout(frame, delay);
     }else{
@@ -388,7 +388,7 @@ function paintResult(agent, final){
   }
 }
 
-// ---- role filter + options ----
+// role filter + options
 function wireFilters(){
   document.querySelectorAll('#roleFilters .chip[data-role]').forEach(chip=>{
     const role = chip.dataset.role;
@@ -440,7 +440,7 @@ function refreshCards(){
   });
 }
 
-// ---- init ----
+// init 
 (async function init(){
   await loadState();
   buildRoster();
